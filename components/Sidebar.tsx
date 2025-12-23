@@ -85,7 +85,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, library, activeId, o
 
   const deleteItem = (e: React.MouseEvent, node: TreeNode) => {
     e.stopPropagation();
-    if (!window.confirm(`Are you sure you want to delete "${node.name}"?`)) return;
+ 
 
     if (node.id) {
       setLibrary(prev => prev.filter(f => f.id !== node.id));
