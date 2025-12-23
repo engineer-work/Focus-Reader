@@ -1,5 +1,4 @@
-
-import React, { useRef, useMemo, useState } from 'react';
+import React, { useRef, useMemo, useState, useEffect } from 'react';
 import { FileEntry } from '../types';
 
 interface SidebarProps {
@@ -25,7 +24,25 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, library, activeId, o
   
   const [draggedPath, setDraggedPath] = useState<string | null>(null);
   const [dragOverPath, setDragOverPath] = useState<string | null>(null);
-  const [openFolders, setOpenFolders] = useState<Set<string>>(new Set([''])); // Root is always open
+  const [openFolders, setOpenFolders] = useState<Set<string>>(new Set(['']));
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Sync fullscreen state with document
+  useEffect(() => {
+    const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
 
   // Tree Logic
   const tree = useMemo(() => {
@@ -62,7 +79,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, library, activeId, o
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, isFolder = false) => {
-    const files = Array.from(e.target.files || []);
+    // Fix: Explicitly cast to File[] to ensure the iterator yields File objects instead of unknown
+    const files = Array.from(e.target.files || []) as File[];
     
     files.filter(f => f.name.endsWith('.txt') || f.name.endsWith('.md')).forEach(file => {
       const reader = new FileReader();
@@ -85,7 +103,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, library, activeId, o
 
   const deleteItem = (e: React.MouseEvent, node: TreeNode) => {
     e.stopPropagation();
- 
+    if (!window.confirm(`Delete "${node.name}"?`)) return;
 
     if (node.id) {
       setLibrary(prev => prev.filter(f => f.id !== node.id));
@@ -275,9 +293,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, library, activeId, o
       
       <div style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Library</h2>
-        <button onClick={onClose} style={{ color: 'var(--text-muted)' }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button 
+            onClick={toggleFullscreen} 
+            title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+            style={{ color: 'var(--text-muted)', padding: '4px' }}
+          >
+            {isFullscreen ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            )}
+          </button>
+          <button onClick={onClose} style={{ color: 'var(--text-muted)' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
       </div>
 
       <div style={{ padding: '0 1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1.5rem' }}>

@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'focusread-v2';
+const CACHE_NAME = 'focusread-v3';
 const ASSETS = [
   '/',
   '/index.html',
@@ -12,17 +12,17 @@ const ASSETS = [
   '/components/Controls.tsx',
   '/components/TextDisplay.tsx',
   '/components/HighlighterReader.tsx',
-  // External Dependencies
+  // External Dependencies - pinning specific versions for consistency
   'https://esm.sh/react@^19.2.3',
   'https://esm.sh/react-dom@^19.2.3',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap'
+  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap',
+  'https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfMZf9.woff2'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      // Use addAll with caution; if one fails, the whole install fails.
-      // For external dependencies, we use a more resilient approach.
+      // resiliant addAll
       return Promise.allSettled(ASSETS.map(url => cache.add(url)));
     })
   );
@@ -41,14 +41,13 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Cache-first strategy for assets
+  // Use a cache-first strategy for local assets and pinned CDN dependencies
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
       return fetch(event.request).then((networkResponse) => {
-        // Only cache valid successful responses
         if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
           return networkResponse;
         }
@@ -58,7 +57,7 @@ self.addEventListener('fetch', (event) => {
         });
         return networkResponse;
       }).catch(() => {
-        // Optional: Return a fallback offline page if both fail
+        // Silent fail for background network requests
       });
     })
   );
